@@ -373,6 +373,10 @@ if __name__ == "__main__":
         "--use-eagle3",
         action="store_true"
     )
+    parser.add_argument(
+        "--data-dir",
+        type=str
+    )
 
     args = parser.parse_args()
 
@@ -386,6 +390,9 @@ if __name__ == "__main__":
         ray.init()
 
     question_file = f"{parent_dir}/data/{args.bench_name}/question.jsonl"
+    if not os.path.exists(question_file):
+        question_file = f"{args.data_dir}/{args.bench_name}/question.jsonl"
+
     if args.answer_file:
         answer_file = args.answer_file
     else:
