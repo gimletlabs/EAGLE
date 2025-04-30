@@ -242,6 +242,7 @@ def get_model_answers(
             )
             torch.cuda.synchronize()
             total_time = time.time() - start_time
+            # BUG, explicit indexing of the first batch element.
             output_ids = output_ids[0][len(input_ids[0]):]
             # be consistent with the template's stop_token_ids
             if conv.stop_token_ids:

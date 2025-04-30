@@ -242,6 +242,8 @@ class EaModel(nn.Module):
         )
         new_token = 0
         max_length = max_length - self.ea_layer.total_tokens - 10
+        accept_length_list = []
+        seq_length = input_ids.shape[1]
         for idx in range(max_length):
             # with Timer("all"):
             self.base_model.model.tree_mask = tree_mask
@@ -279,6 +281,14 @@ class EaModel(nn.Module):
                 hidden_state_new,
                 sample_p
             )
+            # cur_length is a length of the sequence so far,
+            # that included length of the prefix and speculated length
+            # at the current step.
+            # input_ids are of the shape (n_batch, n_token)
+            cur_length = input_ids.shape[1]
+            eagle_accept_length = cur_length - seq_length
+            seq_length = cur_length
+            accept_length_list.append(eagle_accept_length)
 
             if is_llama3:
                 if stop_token_id in input_ids[0, input_len:].tolist():
@@ -293,7 +303,7 @@ class EaModel(nn.Module):
         if not log:
             return input_ids
         else:
-            return input_ids, new_token, idx
+            return input_ids, new_token, idx, accept_length_list
 
     @torch.no_grad()
     def naivegenerate(
@@ -445,7 +455,6 @@ class EaModel(nn.Module):
             best_candidate, accept_length, sample_p = evaluate_posterior(
                 logits, candidates, logits_processor
             )
-            # print(accept_length)
             # with Timer("update_inference_inputs"):
             input_ids, draft_tokens, retrieve_indices, tree_mask, tree_position_ids, new_token, hidden_state, sample_token = update_inference_inputs(
                 input_ids,

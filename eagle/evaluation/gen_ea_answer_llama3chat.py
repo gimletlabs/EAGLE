@@ -159,7 +159,7 @@ def get_model_answers(
             torch.cuda.synchronize()
             start_time = time.time()
 
-            output_ids, new_token, idx = model.eagenerate(
+            output_ids, new_token, idx, acc_len = model.eagenerate(
                 torch.as_tensor(input_ids).cuda(),
                 temperature=temperature,
                 log=True,
@@ -224,6 +224,8 @@ def get_model_answers(
             idxs = []
             new_tokens = []
             wall_time = []
+            acceptance_len_turns = []
+
             for j in range(len(question["turns"])):
                 qs = question["turns"][j]
                 messages.append({
@@ -241,7 +243,7 @@ def get_model_answers(
                 torch.cuda.synchronize()
                 start_time = time.time()
 
-                output_ids, new_token, idx = model.eagenerate(
+                output_ids, new_token, idx, acc_len = model.eagenerate(
                     torch.as_tensor(input_ids).cuda(),
                     temperature=temperature,
                     log=True,
@@ -284,12 +286,14 @@ def get_model_answers(
                 idxs.append(int(idx))
                 new_tokens.append(int(new_token))
                 wall_time.append(total_time)
+                acceptance_len_turns.append(acc_len)
+
                 messages.append({
                     "role": "assistant",
                     "content": output
                 })
             # torch.cuda.empty_cache()
-            choices.append({"index": i, "turns": turns, "idxs": idxs, "new_tokens": new_tokens, "wall_time": wall_time})
+            choices.append({"index": i, "turns": turns, "idxs": idxs, "new_tokens": new_tokens, "wall_time": wall_time, "acceptance_length": acceptance_len_turns, "depth": model.ea_layer.depth})
 
         # Dump answers
         os.makedirs(os.path.dirname(answer_file), exist_ok=True)
@@ -405,7 +409,7 @@ if __name__ == "__main__":
         default="mc_sim_7b_63",
     )
     parser.add_argument(
-        "--use_eagle3",
+        "--use-eagle3",
         action="store_true"
     )
 
